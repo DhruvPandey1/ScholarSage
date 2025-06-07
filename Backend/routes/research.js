@@ -1,13 +1,13 @@
 const express = require('express');
 const axios = require('axios');
 const xml2js = require('xml2js');
-
+const Research = require('../models/Research');
 require('dotenv').config();
 
 const router = express.Router();
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const ARXIV_API_KEY = process.env.ARXIV_API_KEY;
+const ARXIV_API_BASE = process.env.ARXIV_API_KEY;
 
 const CriticAgent = require('../agents/CriticAgent');
 const SummarizerAgent = require('../agents/SummarizerAgent');
@@ -29,7 +29,7 @@ router.post('/plan', async (req, res) => {
   }
 });
 
-// Route to search papers on arXiv
+// Route to search papers on arXiv AND SAVE TO DATABASE
 router.post('/search', async (req, res) => {
   try {
     const { topic } = req.body;
@@ -55,6 +55,13 @@ router.post('/search', async (req, res) => {
       categories: Array.isArray(paper.category) ? paper.category.map(c => c.$.term) : [paper.category.$.term]
     }));
 
+    // SAVE TO DATABASE USING THE MODEL
+    const researchDoc = new Research({
+      topic: topic,
+      papers: formattedPapers
+    });
+    await researchDoc.save();
+
     res.json(formattedPapers);
   } catch (error) {
     console.error('Searching papers failed:', error);
@@ -62,11 +69,23 @@ router.post('/search', async (req, res) => {
   }
 });
 
-// Route to summarize papers
+// Route to summarize papers AND UPDATE DATABASE
 router.post('/summarize', async (req, res) => {
   try {
-    const { papers } = req.body;
+    const { papers, topic } = req.body;
     const summaries = await summarizerAgent.summarizePapers(papers);
+    
+    // UPDATE DATABASE WITH SUMMARIES
+    await Research.findOneAndUpdate(
+      { topic: topic },
+      { $set: { summaries: summaries.map((summary, index) => ({
+        paperId: papers[index].id,
+        keyFindings: summary.keyFindings,
+        methodology: summary.methodology,
+        significance: summary.significance
+      })) }}
+    );
+
     res.json(summaries);
   } catch (error) {
     console.error('Summarizing papers failed:', error);
@@ -74,11 +93,24 @@ router.post('/summarize', async (req, res) => {
   }
 });
 
-// Route to critique papers
+// Route to critique papers AND UPDATE DATABASE
 router.post('/critique', async (req, res) => {
   try {
-    const { papers, summaries } = req.body;
+    const { papers, summaries, topic } = req.body;
     const critiques = await criticAgent.critiquePapers(papers, summaries);
+    
+    // UPDATE DATABASE WITH CRITIQUES
+    await Research.findOneAndUpdate(
+      { topic: topic },
+      { $set: { critiques: critiques.map((critique, index) => ({
+        paperId: papers[index].id,
+        strengths: critique.strengths,
+        limitations: critique.weaknesses,
+        score: critique.relevanceScore,
+        recommendation: critique.recommendation || 'No recommendation provided'
+      })) }}
+    );
+
     res.json(critiques);
   } catch (error) {
     console.error('Critiquing papers failed:', error);
@@ -86,12 +118,11 @@ router.post('/critique', async (req, res) => {
   }
 });
 
-// Route to build knowledge graph (example implementation)
+// Route to build knowledge graph AND SAVE TO DATABASE
 router.post('/graph', async (req, res) => {
   try {
-    const { papers, summaries } = req.body;
+    const { papers, summaries, topic } = req.body;
 
-    // Dummy implementation for graph building
     const nodes = [];
     const links = [];
 
@@ -110,12 +141,39 @@ router.post('/graph', async (req, res) => {
       });
     });
 
-    const graphData = { nodes: [...new Map(nodes.map(item => [item.id, item])).values()], links };
+    const graphData = { 
+      nodes: [...new Map(nodes.map(item => [item.id, item])).values()], 
+      links 
+    };
+
+    // SAVE GRAPH DATA TO DATABASE
+    await Research.findOneAndUpdate(
+      { topic: topic },
+      { $set: { graphData: graphData }}
+    );
+
     res.json(graphData);
 
   } catch (error) {
     console.error('Building knowledge graph failed:', error);
     res.status(500).json({ error: 'Failed to build knowledge graph' });
+  }
+});
+
+// NEW ROUTE: Get saved research by topic
+router.get('/history/:topic', async (req, res) => {
+  try {
+    const { topic } = req.params;
+    const research = await Research.findOne({ topic: topic });
+    
+    if (!research) {
+      return res.status(404).json({ error: 'Research not found' });
+    }
+    
+    res.json(research);
+  } catch (error) {
+    console.error('Getting research history failed:', error);
+    res.status(500).json({ error: 'Failed to get research history' });
   }
 });
 
