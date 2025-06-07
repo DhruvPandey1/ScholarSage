@@ -3,7 +3,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const db= require('./config/db');
 const morgan = require('morgan');
-const routes = require('./routes/research');
+const researchRoutes = require('./routes/research');
+const authRoutes = require('./routes/auth');
 //Connect to the database
 db();
 require('dotenv').config();
@@ -21,7 +22,8 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // API routes
-app.use('/api/research', routes);
+app.use('/api/research', researchRoutes);
+app.use('/api/auth', authRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
