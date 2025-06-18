@@ -1,13 +1,12 @@
 const axios = require('axios');
-require('dotenv').config();
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const { OPENAI_API_KEY } = process.env;
 
 class CriticAgent {
-    constructor(){
-        this.apiKey= OPENAI_API_KEY;
-    }
-    async critiquePaper(paper, summary) {
+  constructor() {
+    this.apiKey = OPENAI_API_KEY;
+  }
+
+  async critiquePaper(paper, summary) {
     try {
       const prompt = this.generateCritiquePrompt(paper, summary);
       const response = await axios.post(
@@ -88,4 +87,4 @@ class CriticAgent {
   }
 }
 
-module.exports = new CriticAgent();
+module.exports = CriticAgent;
