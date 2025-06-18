@@ -1,28 +1,35 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 class ResearchService {
+  getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+  }
+
   // Plan research strategy using Planner Agent
   async planResearch(topic) {
     try {
       const response = await fetch(`${API_BASE_URL}/research/plan`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ topic }),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to plan research');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to plan research');
       }
       
       return await response.json();
     } catch (error) {
-      console.error('Planning research failed:', error);
+      console.error('Planning research failed:', error.message);
       // Return mock data for development
       return {
-        strategy: 'Search for recent papers on ' + topic,
-        keywords: [topic, 'machine learning', 'AI'],
+        strategy: `Research strategy for: ${topic}. Focus on recent developments and key findings.`,
+        keywords: this.extractKeywords(topic),
         timeframe: '2020-2024'
       };
     }
@@ -33,147 +40,182 @@ class ResearchService {
     try {
       const response = await fetch(`${API_BASE_URL}/research/search`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ topic }),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to search papers');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to search papers');
       }
       
       return await response.json();
     } catch (error) {
-      console.error('Searching papers failed:', error);
+      console.error('Searching papers failed:', error.message);
       // Return mock data for development
-      return [
-        {
-          id: '1',
-          title: 'Machine Learning Applications in Healthcare: A Comprehensive Survey',
-          authors: ['Dr. Jane Smith', 'Dr. John Doe', 'Dr. Alice Johnson'],
-          abstract: 'This paper presents a comprehensive survey of machine learning applications in healthcare, covering recent advances in medical imaging, drug discovery, and patient monitoring systems.',
-          publishedDate: '2024-01-15',
-          arxivUrl: 'https://arxiv.org/abs/2401.00001',
-          categories: ['Machine Learning', 'Healthcare', 'Medical Imaging']
-        },
-        {
-          id: '2',
-          title: 'Deep Learning for Medical Diagnosis: Current State and Future Directions',
-          authors: ['Dr. Michael Brown', 'Dr. Sarah Wilson'],
-          abstract: 'An analysis of current deep learning techniques used in medical diagnosis, including CNNs for image analysis and RNNs for sequential medical data processing.',
-          publishedDate: '2024-02-10',
-          arxivUrl: 'https://arxiv.org/abs/2402.00001',
-          categories: ['Deep Learning', 'Medical Diagnosis', 'Neural Networks']
-        }
-      ];
+      return this.getMockPapers(topic);
     }
   }
 
   // Summarize papers using Summarizer Agent
-  async summarizePapers(papers) {
+  async summarizePapers(papers, topic) {
     try {
       const response = await fetch(`${API_BASE_URL}/research/summarize`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ papers }),
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ papers, topic }),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to summarize papers');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to summarize papers');
       }
       
       return await response.json();
     } catch (error) {
-      console.error('Summarizing papers failed:', error);
+      console.error('Summarizing papers failed:', error.message);
       // Return mock data for development
-      return papers.map(() => ({
-        keyFindings: [
-          'Machine learning shows significant promise in healthcare applications',
-          'Deep learning models achieve high accuracy in medical imaging tasks',
-          'Integration challenges remain between AI systems and clinical workflows'
-        ],
-        methodology: 'Systematic review and meta-analysis of 150+ research papers',
-        significance: 'Provides comprehensive overview of ML in healthcare with practical implementation guidelines'
-      }));
+      return papers.map(() => this.getMockSummary());
     }
   }
 
   // Critique papers using Critic Agent
-  async critiquePapers(papers, summaries) {
+  async critiquePapers(papers, summaries, topic) {
     try {
       const response = await fetch(`${API_BASE_URL}/research/critique`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ papers, summaries }),
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ papers, summaries, topic }),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to critique papers');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to critique papers');
       }
       
       return await response.json();
     } catch (error) {
-      console.error('Critiquing papers failed:', error);
+      console.error('Critiquing papers failed:', error.message);
       // Return mock data for development
-      return papers.map(() => ({
-        strengths: [
-          'Comprehensive literature review',
-          'Strong methodology and statistical analysis',
-          'Practical relevance to healthcare practitioners'
-        ],
-        limitations: [
-          'Limited sample size in some studies',
-          'Potential bias in data collection methods',
-          'Need for longer-term follow-up studies'
-        ],
-        score: Math.floor(Math.random() * 3) + 7, // Random score between 7-9
-        recommendation: 'This paper makes valuable contributions to the field and should be included in future systematic reviews.'
-      }));
+      return papers.map(() => this.getMockCritique());
     }
   }
 
   // Build knowledge graph
-  async buildKnowledgeGraph(papers, summaries) {
+  async buildKnowledgeGraph(papers, summaries, topic) {
     try {
       const response = await fetch(`${API_BASE_URL}/research/graph`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ papers, summaries }),
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ papers, summaries, topic }),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to build knowledge graph');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to build knowledge graph');
       }
       
       return await response.json();
     } catch (error) {
-      console.error('Building knowledge graph failed:', error);
+      console.error('Building knowledge graph failed:', error.message);
       // Return mock data for development
-      return {
-        nodes: [
-          { id: 'ml', label: 'Machine Learning', type: 'topic', size: 20 },
-          { id: 'healthcare', label: 'Healthcare', type: 'topic', size: 18 },
-          { id: 'paper1', label: 'ML in Healthcare Survey', type: 'paper', size: 12 },
-          { id: 'paper2', label: 'Deep Learning Diagnosis', type: 'paper', size: 12 },
-          { id: 'author1', label: 'Dr. Smith', type: 'author', size: 8 },
-          { id: 'author2', label: 'Dr. Brown', type: 'author', size: 8 }
-        ],
-        links: [
-          { source: 'ml', target: 'paper1' },
-          { source: 'healthcare', target: 'paper1' },
-          { source: 'ml', target: 'paper2' },
-          { source: 'paper1', target: 'author1' },
-          { source: 'paper2', target: 'author2' }
-        ]
-      };
+      return this.getMockGraph(topic);
     }
+  }
+
+  // Get research history
+  async getResearchHistory(topic) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/research/history/${encodeURIComponent(topic)}`, {
+        headers: this.getAuthHeaders()
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to get research history');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Getting research history failed:', error.message);
+      throw error;
+    }
+  }
+
+  // Helper methods for mock data
+  extractKeywords(text) {
+    const words = text.toLowerCase().split(/\s+/).filter(word => word.length > 3);
+    return words.slice(0, 5);
+  }
+
+  getMockPapers(topic) {
+    return [
+      {
+        id: 'mock_1',
+        title: `Recent Advances in ${topic}: A Comprehensive Survey`,
+        authors: ['Dr. John Smith', 'Dr. Jane Doe'],
+        abstract: `This paper presents a comprehensive survey of recent advances in ${topic}, covering key methodologies and significant findings.`,
+        publishedDate: '2024-01-15',
+        arxivUrl: 'https://arxiv.org/abs/mock1',
+        categories: [topic, 'Research', 'Analysis']
+      },
+      {
+        id: 'mock_2',
+        title: `Novel Approaches to ${topic}: Current State and Future Directions`,
+        authors: ['Dr. Alice Johnson', 'Dr. Bob Wilson'],
+        abstract: `An analysis of novel approaches to ${topic}, discussing current state-of-the-art methods and future research directions.`,
+        publishedDate: '2024-02-10',
+        arxivUrl: 'https://arxiv.org/abs/mock2',
+        categories: [topic, 'Innovation', 'Future Work']
+      }
+    ];
+  }
+
+  getMockSummary() {
+    return {
+      keyFindings: [
+        'Significant improvements in methodology observed',
+        'Novel approaches show promising results',
+        'Strong evidence supporting main hypotheses'
+      ],
+      methodology: 'Systematic review and experimental analysis',
+      significance: 'Important contribution to current understanding of the field'
+    };
+  }
+
+  getMockCritique() {
+    return {
+      strengths: [
+        'Well-designed experimental methodology',
+        'Comprehensive data analysis',
+        'Clear presentation of results'
+      ],
+      weaknesses: [
+        'Limited sample size in some experiments',
+        'Potential for selection bias',
+        'Need for longer-term validation studies'
+      ],
+      score: Math.floor(Math.random() * 3) + 7,
+      recommendation: 'This work provides valuable insights and should be considered in future research.'
+    };
+  }
+
+  getMockGraph(topic) {
+    return {
+      nodes: [
+        { id: 'topic', label: topic, type: 'topic', size: 20 },
+        { id: 'paper1', label: 'Survey Paper', type: 'paper', size: 12 },
+        { id: 'paper2', label: 'Novel Approaches', type: 'paper', size: 12 },
+        { id: 'author1', label: 'Dr. Smith', type: 'author', size: 8 },
+        { id: 'author2', label: 'Dr. Johnson', type: 'author', size: 8 }
+      ],
+      links: [
+        { source: 'topic', target: 'paper1', strength: 0.8 },
+        { source: 'topic', target: 'paper2', strength: 0.8 },
+        { source: 'paper1', target: 'author1', strength: 0.6 },
+        { source: 'paper2', target: 'author2', strength: 0.6 }
+      ]
+    };
   }
 }
 
