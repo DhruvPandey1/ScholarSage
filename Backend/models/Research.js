@@ -1,61 +1,62 @@
 const mongoose = require('mongoose');
 const ResearchSchema = new mongoose.Schema({
-    title: {
-        type: String,
-        required: true,
-        trim: true,
-        minlength: 3,
-        maxlength: 100,
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+    minlength: 3,
+    maxlength: 100,
+  },
+  papers: [{
+    id: {
+      type: String,
+      required: true,
+      // unique: true,
+      trim: true
     },
-    papers: [{
-        id: {
-            type: String,
-            required: true,
-            unique: true,
-            trim: true
-        },
-        title: {
-            type: String,
-            required: true,
-            trim: true,
-            minlength: 5,
-            maxlength: 500
-        },
-        authors: [{
-            type: String,
-            trim: true,
-            minlength: 3,
-            maxlength: 100
-        }],
-        abstract: {
-            type: String,
-            required: true,
-            trim: true,
-            minlength: 10,
-            maxlength: 5000
-        },
-        publishedDate: {
-            type: Date,
-            default: Date.now
-        },
-        arxivUrl: {
-            type: String,
-            trim: true,
-            validate: {
-                validator: function (v) {
-                    return /^(https?:\/\/)?(www\.)?arxiv\.org\/abs\/[0-9]{4}\.[0-9]{4,5}(v[0-9]+)?$/.test(v);
-                },
-                message: props => `${props.value} is not a valid arXiv URL!`
-            }
-        },
-        categories: [{
-            type: String,
-            trim: true,
-            minlength: 3,
-            maxlength: 50
-        }]
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 5,
+      maxlength: 500
+    },
+    authors: [{
+      type: String,
+      trim: true,
+      minlength: 3,
+      maxlength: 100
     }],
-    summaries: [{
+    abstract: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 10,
+      maxlength: 5000
+    },
+    publishedDate: {
+      type: Date,
+      default: Date.now
+    },
+    arxivUrl: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: function (v) {
+          return /^(https?:\/\/)?(www\.)?arxiv\.org\/abs\/(\d{4}\.\d{4,5}|[a-z\-]+\/\d{7})(v\d+)?$/.test(v);
+        },
+        message: props => `${props.value} is not a valid arXiv URL!`
+      }
+    },
+
+    categories: [{
+      type: String,
+      trim: true,
+      minlength: 3,
+      maxlength: 50
+    }]
+  }],
+  summaries: [{
     paperId: {
       type: String,
       required: true,
