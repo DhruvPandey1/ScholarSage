@@ -1,68 +1,45 @@
-const OpenAI = require('openai');
 const FreeAiService = require('../services/freeAiService');
 
-// Planner Agent - Determines research strategy
+// Planner Agent - Uses only free open-source models
 class PlannerAgent {
-    constructor(apiKey) {
-        this.openai = new OpenAI({
-            apiKey: apiKey
-        });
+    constructor(apiKey = null) {
+        // Always use free AI service regardless of API key availability
         this.freeAiService = new FreeAiService();
+        console.log('PlannerAgent initialized with free models only');
     }
 
     async planResearch(topic) {
         try {
-            const prompt = `You are an expert research planner. Your task is to create a detailed research strategy for the given topic.
-            Topic: ${topic}
+            console.log(`Planning research for topic: ${topic} using free models`);
             
-            Consider the following:
-            - What are the key areas to investigate?
-            - What search terms should be used to find relevant papers?
-            - What timeframe should be considered?
+            // Use free AI service directly
+            const plan = await this.freeAiService.generateResponse(topic, 'plan');
             
-            Your output should be a JSON object with the following keys:
-            - strategy (string): A detailed research strategy.
-            - keywords (array of strings): Specific keywords to use for searching papers.
-            - timeframe (string): The timeframe to consider (e.g., "2020-2024").`;
-
-            const response = await this.openai.chat.completions.create({
-                model: "gpt-3.5-turbo",
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a research planning expert. Always respond with valid JSON."
-                    },
-                    {
-                        role: "user",
-                        content: prompt
-                    }
-                ],
-                max_tokens: 300,
-                temperature: 0.7
-            });
-
-            const jsonString = response.choices[0].message.content.trim();
-
-            try {
-                const plan = JSON.parse(jsonString);
-                return plan;
-            } catch (error) {
-                console.error('Failed to parse JSON:', error);
-                console.error('Received string:', jsonString);
-                throw new Error('Failed to parse research plan from LLM output.');
-            }
+            console.log('Research plan generated successfully using free models');
+            return plan;
 
         } catch (error) {
-            console.error('OpenAI planning failed, using fallback:', error.message);
-
-            // Use free AI service as fallback
-            if (['insufficient_quota', 'rate_limit_exceeded', '429'].includes(error.code)) {
-                console.error('Using free AI service due to OpenAI quota exhaustion');
-                return await this.freeAiService.generateResponse(topic, 'plan');
-            }
+            console.error('Free AI planning failed, using rule-based fallback:', error.message);
             
-            return await this.freeAiService.generateResponse(topic, 'plan');
+            // Always return a valid response
+            return this.generateBasicPlan(topic);
         }
+    }
+
+    generateBasicPlan(topic) {
+        return {
+            strategy: `Comprehensive research strategy for "${topic}": 1) Conduct systematic literature search using multiple academic databases, 2) Focus on peer-reviewed publications from the last 5 years, 3) Analyze key methodologies and findings, 4) Identify research gaps and future directions.`,
+            keywords: this.extractTopicKeywords(topic),
+            timeframe: '2019-2024'
+        };
+    }
+
+    extractTopicKeywords(topic) {
+        // Generate relevant keywords based on the topic
+        const baseKeywords = topic.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+        const additionalKeywords = ['research', 'analysis', 'study', 'methodology', 'findings'];
+        
+        return [...baseKeywords, ...additionalKeywords].slice(0, 6);
     }
 }
 
